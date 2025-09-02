@@ -1,0 +1,5 @@
+{
+  "name": "Common Phrases 2048",
+  "description": "A 2048-style game to help you learn common Japanese classroom phrases in Hiragana. Merge tiles to form words and complete levels!",
+  "requestFramePermissions": []
+}
