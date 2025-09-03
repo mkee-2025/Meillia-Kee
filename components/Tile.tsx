@@ -43,18 +43,22 @@ const Tile: React.FC<TileProps> = ({ tile, grid, gameMap }) => {
   const top = `calc(${position.row * 100}% + ${position.row} * var(--grid-gap))`;
   const left = `calc(${position.col * 100}% + ${position.col} * var(--grid-gap))`;
   
+  const tileDimension = `calc((100% - 3 * var(--grid-gap)) / 4)`;
+
   const style = {
     transform: `translate(${left}, ${top}) scale(${scale})`,
+    width: tileDimension,
+    height: tileDimension,
   };
 
   return (
     <div
-      className={`absolute w-1/4 h-1/4 p-1 transition-transform duration-200 ease-in-out`}
+      className={`absolute p-1 transition-transform duration-200 ease-in-out`}
       style={style}
     >
       <div className={`w-full h-full rounded-md flex flex-col items-center justify-center font-bold select-none ${appearance}`}>
-        <span className="text-3xl sm:text-4xl">{char}</span>
-        <span className="text-sm sm:text-base">{romaji}</span>
+        <span className="text-[2.5em]">{char}</span>
+        <span className="text-[1em]">{romaji}</span>
       </div>
     </div>
   );

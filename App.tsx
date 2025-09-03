@@ -57,7 +57,7 @@ const App: React.FC = () => {
 
   if (!gameMap) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="w-full h-full flex items-center justify-center">
         <p>Loading...</p>
       </div>
     );
@@ -67,8 +67,10 @@ const App: React.FC = () => {
   const finalChar = currentPhrase.characters[currentPhrase.characters.length - 1];
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 font-sans">
-      <div className="relative w-full max-w-md mx-auto">
+    <div className="game-container w-full h-full flex items-center justify-center p-2">
+      <div 
+        className="relative w-full h-full max-w-[420px] max-h-[840px] aspect-[1/2] flex flex-col bg-slate-50 shadow-lg rounded-xl p-[2em] font-sans"
+      >
         <Header 
           score={score} 
           bestScore={bestScore} 
@@ -76,17 +78,19 @@ const App: React.FC = () => {
           level={currentLevel + 1}
           phrase={currentPhrase}
         />
-        <main className="mt-4">
-          <div className="flex justify-center items-center mb-3 bg-slate-200 p-2 rounded-lg">
-            <p className="font-semibold text-slate-700 text-sm sm:text-base">
+        <main className="mt-[1.5em] flex-grow flex flex-col">
+          <div className="flex justify-center items-center mb-[1em] bg-slate-200 p-[0.75em] rounded-lg">
+            <p className="font-semibold text-slate-700 text-[1.2em]">
               Goal: Make 5 <span className="text-sky-600 font-bold">{finalChar.char}</span> tiles
               <span className="mx-2 text-slate-400">|</span>
               Collected: <span className="font-bold text-slate-900">{finalTilesCollected > 5 ? 5 : finalTilesCollected} / 5</span>
             </p>
           </div>
-          <GameBoard grid={grid} onMove={move} gameMap={gameMap} />
+          <div className="flex-grow flex items-center justify-center">
+             <GameBoard grid={grid} onMove={move} gameMap={gameMap} />
+          </div>
         </main>
-        <footer className="text-center mt-4 text-slate-500">
+        <footer className="text-center mt-[1.5em] text-slate-500 text-[1em]">
           <p>
             <strong>How to play:</strong> Use your arrow keys (or swipe) to move the tiles.
             When two tiles with the same Kana touch, they merge into the next one in the phrase!

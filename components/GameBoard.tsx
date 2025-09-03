@@ -53,18 +53,20 @@ const GameBoard: React.FC<GameBoardProps> = ({ grid, onMove, gameMap }) => {
   const tiles = grid.flat().filter((tile): tile is NonNullable<typeof tile> => tile !== null);
 
   return (
-    <div
-      className="relative bg-slate-300 rounded-lg p-3 sm:p-4 grid grid-cols-4 grid-rows-4 touch-none game-board-grid"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      {cells.map((_, index) => (
-        <div key={index} className="w-full aspect-square bg-slate-400/50 rounded-md" />
-      ))}
-      {tiles.map(tile => (
-        <Tile key={tile.id} tile={tile} grid={grid} gameMap={gameMap} />
-      ))}
+    <div className="w-full max-w-[50vh] aspect-square bg-slate-300 rounded-lg p-3 sm:p-4">
+      <div
+        className="relative grid grid-cols-4 grid-rows-4 touch-none game-board-grid w-full h-full"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {cells.map((_, index) => (
+          <div key={index} className="w-full aspect-square bg-slate-400/50 rounded-md" />
+        ))}
+        {tiles.map(tile => (
+          <Tile key={tile.id} tile={tile} grid={grid} gameMap={gameMap} />
+        ))}
+      </div>
     </div>
   );
 };
