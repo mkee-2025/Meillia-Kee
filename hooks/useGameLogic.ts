@@ -24,14 +24,44 @@ const addRandomTile = (grid: Grid, levelIndex: number): Grid => {
   const cell = getRandomEmptyCell(newGrid);
   if (cell) {
     const currentPhrase = CLASSROOM_PHRASES[levelIndex];
-    // Add one of the first two characters of the phrase, ensuring we don't go out of bounds.
-    const offset = Math.random() < 0.9 ? 0 : (currentPhrase.characters.length > 1 ? 1 : 0);
-    const level = offset; // level is the index in the phrase's character array
+    // If the phrase only has one character, we can only spawn that one.
+    if (currentPhrase.characters.length < 2) {
+      newGrid[cell.r][cell.c] = { id: tileIdCounter++, level: 0, isNew: true };
+      return newGrid;
+    }
+
+    // Dynamically adjust spawn rates based on existing tiles to improve game flow.
+    let level0Count = 0;
+    let level1Count = 0;
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        const tile = grid[r][c];
+        if (tile) {
+          if (tile.level === 0) level0Count++;
+          else if (tile.level === 1) level1Count++;
+        }
+      }
+    }
+
+    // Default probability is 50/50 for level 0 and 1 tiles.
+    // If the board becomes unbalanced, skew the probability to help the player.
+    // e.g., if there are many more 'o' tiles than 'ha' tiles, increase the chance of 'ha' spawning.
+    let probOfSpawningLevel1 = 0.5;
+    if (level0Count > level1Count + 1) {
+      // Significantly more level 0 tiles, so we need more level 1 tiles.
+      probOfSpawningLevel1 = 0.75; 
+    } else if (level1Count > level0Count + 1) {
+      // Significantly more level 1 tiles, so we need more level 0 tiles.
+      probOfSpawningLevel1 = 0.25;
+    }
+
+    const level = Math.random() < probOfSpawningLevel1 ? 1 : 0;
     
     newGrid[cell.r][cell.c] = { id: tileIdCounter++, level, isNew: true };
   }
   return newGrid;
 };
+
 
 const areGridsEqual = (gridA: Grid, gridB: Grid): boolean => {
   for (let r = 0; r < GRID_SIZE; r++) {
@@ -44,36 +74,41 @@ const areGridsEqual = (gridA: Grid, gridB: Grid): boolean => {
   return true;
 };
 
-const moveAndMerge = (line: (TileData | null)[], maxLevel: number): { newLine: (TileData | null)[]; points: number; finalTilesCreated: number } => {
+const moveAndMerge = (line: (TileData | null)[], phraseLength: number): { newLine: (TileData | null)[]; points: number; phrasesCompleted: number } => {
   const filtered = line.filter(Boolean) as TileData[];
   const newLine: (TileData | null)[] = [];
   let points = 0;
-  let finalTilesCreated = 0;
+  let phrasesCompleted = 0;
   let i = 0;
   while (i < filtered.length) {
-    const currentLevel = filtered[i].level;
-    if (i + 1 < filtered.length && currentLevel === filtered[i + 1].level) {
-      if (currentLevel === maxLevel) {
-        // Final tiles merge and disappear, giving a score bonus
-        points += Math.pow(2, currentLevel + 2);
-      } else {
-        const newLevel = currentLevel + 1;
-        if (newLevel === maxLevel) {
-          finalTilesCreated++;
+    if (i + 1 < filtered.length) {
+      const level1 = filtered[i].level;
+      const level2 = filtered[i + 1].level;
+
+      // Check for sequential merge, e.g., 'o' (0) and 'ha' (1)
+      if (Math.abs(level1 - level2) === 1) {
+        const newLevel = Math.max(level1, level2) + 1;
+
+        if (newLevel >= phraseLength) {
+          phrasesCompleted++;
+          points += Math.pow(2, phraseLength);
+        } else {
+          newLine.push({ id: tileIdCounter++, level: newLevel, isMerged: true });
+          points += Math.pow(2, newLevel);
         }
-        newLine.push({ id: tileIdCounter++, level: newLevel, isMerged: true });
-        points += Math.pow(2, newLevel + 1);
+        i += 2; // Skip both merged tiles
+        continue;
       }
-      i += 2; // Skip both merged tiles
-    } else {
-      newLine.push(filtered[i]);
-      i++;
     }
+    
+    // If no merge, push the current tile and move to the next one
+    newLine.push(filtered[i]);
+    i++;
   }
   while (newLine.length < GRID_SIZE) {
     newLine.push(null);
   }
-  return { newLine, points, finalTilesCreated };
+  return { newLine, points, phrasesCompleted };
 };
 
 const transposeGrid = (grid: Grid): Grid => {
@@ -86,15 +121,24 @@ const transposeGrid = (grid: Grid): Grid => {
   return newGrid;
 };
 
-const canMove = (grid: Grid, maxLevel: number): boolean => {
+const canMove = (grid: Grid): boolean => {
   for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE; c++) {
       if (grid[r][c] === null) return true; // Empty cell exists
       const currentLevel = grid[r][c]?.level;
       if (currentLevel !== undefined) {
-          // A move is possible if a merge can happen
-          if (r + 1 < GRID_SIZE && currentLevel === grid[r+1][c]?.level) return true;
-          if (c + 1 < GRID_SIZE && currentLevel === grid[r][c+1]?.level) return true;
+        // Check for horizontal merge possibility
+        if (c + 1 < GRID_SIZE && grid[r][c+1] !== null) {
+          if (Math.abs(grid[r][c+1]!.level - currentLevel) === 1) {
+            return true;
+          }
+        }
+        // Check for vertical merge possibility
+        if (r + 1 < GRID_SIZE && grid[r+1][c] !== null) {
+           if (Math.abs(grid[r+1][c]!.level - currentLevel) === 1) {
+            return true;
+          }
+        }
       }
     }
   }
@@ -108,7 +152,7 @@ export const useGameLogic = (levelIndex: number) => {
   const [isGameOver, setIsGameOver] = useState(false);
   const [isLevelWon, setIsLevelWon] = useState(false);
   const [gameMap, setGameMap] = useState<GameCharacter[] | null>(null);
-  const [finalTilesCollected, setFinalTilesCollected] = useState(0);
+  const [phrasesCompleted, setPhrasesCompleted] = useState(0);
 
   const resetGame = useCallback(() => {
     tileIdCounter = 1;
@@ -117,7 +161,7 @@ export const useGameLogic = (levelIndex: number) => {
     newGrid = addRandomTile(newGrid, levelIndex);
     setGrid(newGrid);
     setScore(0);
-    setFinalTilesCollected(0);
+    setPhrasesCompleted(0);
     setIsGameOver(false);
     setIsLevelWon(false);
   }, [levelIndex]);
@@ -134,28 +178,28 @@ export const useGameLogic = (levelIndex: number) => {
     let newGrid = createEmptyGrid();
     let moved = false;
     let points = 0;
-    let finalTilesThisMove = 0;
+    let phrasesCompletedThisMove = 0;
 
-    const maxLevel = CLASSROOM_PHRASES[levelIndex].characters.length - 1;
+    const phraseLength = CLASSROOM_PHRASES[levelIndex].characters.length;
 
     if (direction === 'left' || direction === 'right') {
       for (let r = 0; r < GRID_SIZE; r++) {
         const line = currentGrid[r];
         const orderedLine = direction === 'left' ? line : [...line].reverse();
-        const { newLine, points: p, finalTilesCreated: f } = moveAndMerge(orderedLine, maxLevel);
+        const { newLine, points: p, phrasesCompleted: f } = moveAndMerge(orderedLine, phraseLength);
         newGrid[r] = direction === 'left' ? newLine : newLine.reverse();
         points += p;
-        finalTilesThisMove += f;
+        phrasesCompletedThisMove += f;
       }
     } else { // 'up' or 'down'
       currentGrid = transposeGrid(currentGrid);
       for (let r = 0; r < GRID_SIZE; r++) {
         const line = currentGrid[r];
         const orderedLine = direction === 'up' ? line : [...line].reverse();
-        const { newLine, points: p, finalTilesCreated: f } = moveAndMerge(orderedLine, maxLevel);
+        const { newLine, points: p, phrasesCompleted: f } = moveAndMerge(orderedLine, phraseLength);
         newGrid[r] = direction === 'up' ? newLine : newLine.reverse();
         points += p;
-        finalTilesThisMove += f;
+        phrasesCompletedThisMove += f;
       }
       newGrid = transposeGrid(newGrid);
     }
@@ -165,25 +209,25 @@ export const useGameLogic = (levelIndex: number) => {
     if (moved) {
       const gridWithNewTile = addRandomTile(newGrid, levelIndex);
       const newScore = score + points;
-      const newFinalTilesCollected = finalTilesCollected + finalTilesThisMove;
+      const newPhrasesCompleted = phrasesCompleted + phrasesCompletedThisMove;
 
       setScore(newScore);
-      setFinalTilesCollected(newFinalTilesCollected);
+      setPhrasesCompleted(newPhrasesCompleted);
 
       if (newScore > bestScore) {
         setBestScore(newScore);
         localStorage.setItem('bestScore', String(newScore));
       }
 
-      if (newFinalTilesCollected >= 5) {
+      if (newPhrasesCompleted >= 5) {
         setIsLevelWon(true);
-      } else if (!canMove(gridWithNewTile, maxLevel)) {
+      } else if (!canMove(gridWithNewTile)) {
         setIsGameOver(true);
       }
       
       setGrid(gridWithNewTile);
     }
-  }, [grid, score, bestScore, isGameOver, isLevelWon, levelIndex, finalTilesCollected]);
+  }, [grid, score, bestScore, isGameOver, isLevelWon, levelIndex, phrasesCompleted]);
 
-  return { grid, score, bestScore, isGameOver, isLevelWon, move, resetGame, gameMap, finalTilesCollected };
+  return { grid, score, bestScore, isGameOver, isLevelWon, move, resetGame, gameMap, phrasesCompleted };
 };

@@ -12,7 +12,7 @@ const App: React.FC = () => {
   const [currentLevel, setCurrentLevel] = useState(0);
   const [gameComplete, setGameComplete] = useState(false);
 
-  const { grid, score, bestScore, isGameOver, isLevelWon, move, resetGame, gameMap, finalTilesCollected } = useGameLogic(currentLevel);
+  const { grid, score, bestScore, isGameOver, isLevelWon, move, resetGame, gameMap, phrasesCompleted } = useGameLogic(currentLevel);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (isGameOver || isLevelWon || gameComplete) return;
@@ -64,7 +64,6 @@ const App: React.FC = () => {
   }
 
   const currentPhrase = CLASSROOM_PHRASES[currentLevel];
-  const finalChar = currentPhrase.characters[currentPhrase.characters.length - 1];
 
   return (
     <div className="game-container w-full h-full flex items-center justify-center p-2">
@@ -81,9 +80,9 @@ const App: React.FC = () => {
         <main className="mt-[1.5em] flex-grow flex flex-col">
           <div className="flex justify-center items-center mb-[1em] bg-slate-200 p-[0.75em] rounded-lg">
             <p className="font-semibold text-slate-700 text-[1.2em]">
-              Goal: Make 5 <span className="text-sky-600 font-bold">{finalChar.char}</span> tiles
+              Goal: Complete the phrase 5 times
               <span className="mx-2 text-slate-400">|</span>
-              Collected: <span className="font-bold text-slate-900">{finalTilesCollected > 5 ? 5 : finalTilesCollected} / 5</span>
+              Completed: <span className="font-bold text-slate-900">{phrasesCompleted > 5 ? 5 : phrasesCompleted} / 5</span>
             </p>
           </div>
           <div className="flex-grow flex items-center justify-center">
@@ -93,7 +92,7 @@ const App: React.FC = () => {
         <footer className="text-center mt-[1.5em] text-slate-500 text-[1em]">
           <p>
             <strong>How to play:</strong> Use your arrow keys (or swipe) to move the tiles.
-            When two tiles with the same Kana touch, they merge into the next one in the phrase!
+            When two tiles with sequential Kana touch, they merge into the next one in the phrase!
           </p>
         </footer>
         {gameComplete && <GameCompleteOverlay onRestart={handleRestartFromBeginning} />}
